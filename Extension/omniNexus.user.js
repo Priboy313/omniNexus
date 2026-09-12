@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         omniNexus
-// @version      2.0
+// @version      2026.09.12.1
 // @author       Priboy313
 // @match        *://*/*
 // @grant        GM_xmlhttpRequest
