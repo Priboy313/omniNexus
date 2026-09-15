@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         omniNexus
-// @version      2026.09.15
+// @version      2026.09.15.1
 // @author       Priboy313
 // @description  A modular userscript framework for creating virtual workspaces and dashboards.
 // @match        *://*/*
