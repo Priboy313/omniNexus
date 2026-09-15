@@ -1,0 +1,39 @@
+{
+	"routes": [
+		{
+			"moduleId": "kanban",
+			"name": "📋 omniKanban",
+			"desc": "Multi-board Kanban workspace with column reordering and nested checklists.",
+			"subpath": "kanban",
+			"worker": "kanban.js"
+		},
+		{
+			"moduleId": "todo",
+			"name": "📝 QA Checklist",
+			"desc": "Two-pane test-run and QA checklist manager with Pass/Fail/NA tracking.",
+			"subpath": "todo",
+			"worker": "todo.js"
+		},
+		{
+			"moduleId": "pass",
+			"name": "🔐 omniPass",
+			"desc": "Test credential and account vault with one-click clipboard copy.",
+			"subpath": "pass",
+			"worker": "pass.js"
+		},
+		{
+			"moduleId": "word",
+			"name": "📄 omniWord",
+			"desc": "Document and note editor with templates and monospace support.",
+			"subpath": "word",
+			"worker": "word.js"
+		},
+		{
+			"moduleId": "sheet",
+			"name": "📊 omniSheet",
+			"desc": "Lightweight spreadsheet processor with formula engine and Excel TSV sync.",
+			"subpath": "sheet",
+			"worker": "sheet.js"
+		}
+	]
+}
