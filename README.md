@@ -84,27 +84,5 @@ Tampermonkey will intercept the navigation, load all core scripts and modules di
 
 ---
 
-## 💻 Architecture & Repository Layout
-
-```text
-omniNexus/
-├── Extension/                      # Client-side userscript environment
-│   ├── _core/
-│   │   └── NexusBehaviour.js       # Base runtime & UI engine
-│   ├── Base/                       # Active workspace directory
-│   │   ├── router.json             # Workspace route definitions
-│   │   ├── dashboard.js            # Workspace Hub & Launcher
-│   │   └── *.js                    # Pluggable workspace modules
-│	├──	omniNexus.user.js           # Universal Tampermonkey master connector
-│   └── version.json                # Release version stamp (CalVer)
-│
-├── Server/                         # Backend for server deployment
-│   └── ...
-│
-└── build.py                        # Automated release packager & CalVer bumper
-```
-
----
-
 ## 🔨 Maintained by 
 - Priboy313
