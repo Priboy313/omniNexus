@@ -2,10 +2,8 @@ var ModuleClass = (function(NexusBehaviour) {
 
 	return class NexusTodo extends NexusBehaviour.Explorer {
 
-		moduleTitle = '📝 omniNexus QA Checklist';
-		storageKey = 'todo';
-		fileIcon = '📝';
-		templateIcon = '📑';
+		moduleIcon = '📝';
+		moduleTitle = 'omniNexus Checklist';
 		defaultFileName = 'New Checklist';
 		defaultTemplateName = 'New Template';
 		emptyStateIcon = '📭';
@@ -74,7 +72,7 @@ var ModuleClass = (function(NexusBehaviour) {
 
 			task.status = nextStatus;
 			task.done = (nextStatus === 'passed');
-
+			
 			this.persist();
 			this.render();
 		}
@@ -239,7 +237,7 @@ var ModuleClass = (function(NexusBehaviour) {
 				active.items.push({ id: 'i_' + Date.now(), text: val, status: 'todo', done: false });
 				this.persist();
 				this.render();
-
+				
 				const newInput = document.getElementById('new-task-input');
 				if (newInput) newInput.focus();
 			};

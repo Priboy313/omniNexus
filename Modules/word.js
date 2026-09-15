@@ -2,10 +2,8 @@ var ModuleClass = (function(NexusBehaviour) {
 
 	return class OmniWord extends NexusBehaviour.Explorer {
 
-		moduleTitle = '📄 omniWord Studio';
-		storageKey = 'word';
-		fileIcon = '📝';
-		templateIcon = '📑';
+		moduleIcon = '📄';
+		moduleTitle = 'omniWord Studio';
 		defaultFileName = 'New Document';
 		defaultTemplateName = 'New Template';
 		emptyStateIcon = '📂';

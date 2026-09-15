@@ -2,12 +2,14 @@ var ModuleClass = (function(NexusBehaviour) {
 
 	return class NexusDashboard extends NexusBehaviour {
 
+		moduleIcon = '⚡';
+
 		defaults = {
 			title: 'omniNexus'
 		};
 
 		awake() {
-			document.documentElement.innerHTML = `<head><title>${this.CONFIG.workspace} Hub</title></head><body><div class="container" id="app"></div></body>`;
+			document.documentElement.innerHTML = `<head><title>${this.env.workspace} Hub</title></head><body><div class="container" id="app"></div></body>`;
 			
 			this.addCSS(`
 				* { box-sizing: border-box; }
@@ -34,7 +36,7 @@ var ModuleClass = (function(NexusBehaviour) {
 				textarea { width: 100%; height: 160px; background: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 6px; padding: 10px; margin-top: 12px; font-family: monospace; font-size: 12px; }
 				
 				.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-				.action-btn { background: #334155; border: 1px solid #475569; color: #f8fafc; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: background 0.15s, border-color 0.15s, color 0.15s; }
+				.action-btn { background: #334155; border: 1px solid #475569; color: #f8fafc; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; }
 				.action-btn:hover { background: #475569; }
 				.action-btn.primary { background: #0284c7; border-color: #0284c7; color: white; }
 				.action-btn.primary:hover { background: #0369a1; }
@@ -51,12 +53,12 @@ var ModuleClass = (function(NexusBehaviour) {
 		render() {
 			const app = document.getElementById('app');
 			
-			const routerData = this.loadGlobal('router', { routes: [] });
-			const verData = this.loadGlobal('version', { version: '1.0.0' });
-			const currentVersion = typeof verData === 'object' && verData?.version ? verData.version : String(verData);
-			const globalSettings = this.loadGlobal('settings', {});
+			const manifest = this.storage.getGlobal ? this.storage.getGlobal('router', { routes: [] }) : { routes: [] };
+			const globalSettings = this.storage.getGlobal ? this.storage.getGlobal('settings', {}) : {};
+			const version = this.env.version || '1.0.0';
+			const provider = (this.env.provider || 'local').toUpperCase();
 
-			const routes = routerData.routes || [];
+			const routes = manifest.routes || [];
 			let modulesHTML = '';
 
 			if (routes.length === 0) {
@@ -66,7 +68,7 @@ var ModuleClass = (function(NexusBehaviour) {
 					let targetUrl = m.launchUrl;
 					if (m.subpath) {
 						const cleanSub = m.subpath.replace(/^\/+|\/+$/g, '');
-						targetUrl = `https://${this.CONFIG.dashboardHost}${this.CONFIG.dashboardPath}/${cleanSub}`;
+						targetUrl = `https://${this.env.dashboardHost}${this.env.dashboardPath}/${cleanSub}`;
 					}
 
 					modulesHTML += `
@@ -84,10 +86,10 @@ var ModuleClass = (function(NexusBehaviour) {
 			app.innerHTML = `
 				<header>
 					<div>
-						<h1 class="brand-title">⚡ ${this.config?.title || 'omniNexus'} <span>// ${this.workspace}</span></h1>
+						<h1 class="brand-title">⚡ ${this.config?.title || 'omniNexus'} <span>// ${this.env.workspace}</span></h1>
 						<div class="brand-subtitle">Environment Hub & Launcher</div>
 					</div>
-					<div class="meta-pill">${this.CONFIG.provider.toUpperCase()} : v${currentVersion}</div>
+					<div class="meta-pill">${provider} : v${version}</div>
 				</header>
 
 				<div>
@@ -97,8 +99,9 @@ var ModuleClass = (function(NexusBehaviour) {
 					</div>
 				</div>
 
+				<!-- Блок бэкапа и переноса данных -->
 				<details>
-					<summary>📦 Backup & Data Transfer (${this.workspace})</summary>
+					<summary>📦 Backup & Data Transfer (${this.env.workspace})</summary>
 					<p style="color:#94a3b8;font-size:13px;margin:8px 0 0 0;">
 						Copy the payload below to transfer data, or paste an existing backup to restore.
 					</p>
@@ -115,8 +118,9 @@ var ModuleClass = (function(NexusBehaviour) {
 					</div>
 				</details>
 
+				<!-- Блок настроек -->
 				<details>
-					<summary>⚙️ Workspace Configuration (${this.workspace})</summary>
+					<summary>⚙️ Workspace Configuration (${this.env.workspace})</summary>
 					<textarea id="settings-area">${JSON.stringify(globalSettings, null, 2)}</textarea>
 					<div class="btn-row">
 						<button class="action-btn primary" id="save-settings-btn">Save Configuration</button>
@@ -129,7 +133,9 @@ var ModuleClass = (function(NexusBehaviour) {
 			document.getElementById('save-settings-btn').onclick = () => {
 				try {
 					const val = JSON.parse(document.getElementById('settings-area').value);
-					this.saveGlobal('settings', val);
+					if (this.storage.setGlobal) {
+						this.storage.setGlobal('settings', val);
+					}
 					alert('Configuration saved successfully.');
 				} catch (e) {
 					alert('JSON validation error: ' + e.message);
@@ -137,62 +143,20 @@ var ModuleClass = (function(NexusBehaviour) {
 			};
 		}
 
-		getAllWorkspaceData() {
-			const prefix = `nexus_${this.workspace}_`;
-			let keys = [];
-
-			if (typeof this._GM_list === 'function') {
-				keys = this._GM_list().filter(k => k.startsWith(prefix)).map(k => k.replace(prefix, ''));
-			} else {
-				keys = ['trello', 'todo', 'pass', 'word', 'sheet', 'settings', 'router'];
-			}
-
-			const payload = {
-				__meta: {
-					workspace: this.workspace,
-					timestamp: Date.now(),
-					exportedAt: new Date().toISOString()
-				},
-				data: {}
-			};
-
-			keys.forEach(k => {
-				const val = this.loadGlobal(k, null);
-				if (val !== null) {
-					payload.data[k] = val;
-				}
-			});
-
-			return payload;
-		}
-
-		applyWorkspaceData(payload) {
-			const data = payload.data || payload;
-			let count = 0;
-
-			for (const key in data) {
-				if (key === '__meta') continue;
-				this.saveGlobal(key, data[key]);
-				count++;
-			}
-
-			alert(`Successfully restored ${count} data sections. The page will reload.`);
-			window.location.reload();
-		}
-
 		initBackupHandlers() {
 			const area = document.getElementById('backup-text');
 			const fileInput = document.getElementById('file-input');
 			const copyBtn = document.getElementById('btn-copy-text');
 
+			// Экспорт данных через Storage Adapter
 			document.getElementById('btn-export-text').onclick = () => {
-				const data = this.getAllWorkspaceData();
+				const data = this.storage.exportAll ? this.storage.exportAll() : {};
 				area.value = JSON.stringify(data, null, 2);
 			};
 
 			copyBtn.onclick = () => {
 				if (!area.value.trim()) {
-					const data = this.getAllWorkspaceData();
+					const data = this.storage.exportAll ? this.storage.exportAll() : {};
 					area.value = JSON.stringify(data, null, 2);
 				}
 				navigator.clipboard.writeText(area.value).then(() => {
@@ -206,6 +170,7 @@ var ModuleClass = (function(NexusBehaviour) {
 				});
 			};
 
+			// Импорт данных через Storage Adapter
 			document.getElementById('btn-import-text').onclick = () => {
 				let raw = area.value.trim();
 				if (!raw) return alert('Input field is empty.');
@@ -220,20 +185,24 @@ var ModuleClass = (function(NexusBehaviour) {
 				try {
 					const parsed = JSON.parse(raw);
 					if (!confirm('Apply backup? Current workspace data will be overwritten.')) return;
-					this.applyWorkspaceData(parsed);
+					
+					if (this.storage.importAll) {
+						this.storage.importAll(parsed);
+					}
+					alert('Workspace data restored successfully. The page will reload.');
+					window.location.reload();
 				} catch (e) {
-					console.error('[Backup Import Error]', e);
 					alert(`JSON Parse Error: ${e.message}\n\nPlease ensure the full payload was copied.`);
 				}
 			};
 
 			document.getElementById('btn-export-file').onclick = () => {
-				const data = this.getAllWorkspaceData();
+				const data = this.storage.exportAll ? this.storage.exportAll() : {};
 				const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
 				const url = URL.createObjectURL(blob);
 				const a = document.createElement('a');
 				a.href = url;
-				a.download = `nexus_backup_${this.workspace}_${Date.now()}.json`;
+				a.download = `nexus_backup_${this.env.workspace}_${Date.now()}.json`;
 				a.click();
 				URL.revokeObjectURL(url);
 			};
@@ -249,7 +218,11 @@ var ModuleClass = (function(NexusBehaviour) {
 					try {
 						const parsed = JSON.parse(ev.target.result);
 						if (!confirm('Load data from file? Current workspace data will be overwritten.')) return;
-						this.applyWorkspaceData(parsed);
+						if (this.storage.importAll) {
+							this.storage.importAll(parsed);
+						}
+						alert('Data loaded successfully. The page will reload.');
+						window.location.reload();
 					} catch (err) {
 						alert('File read error: Invalid JSON format.');
 					}

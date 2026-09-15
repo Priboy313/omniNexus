@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         omniNexus
-// @version      2026.09.12.1
+// @version      2026.09.15
 // @author       Priboy313
+// @description  A modular userscript framework for creating virtual workspaces and dashboards.
 // @match        *://*/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
@@ -10,7 +11,7 @@
 // @run-at       document-start
 // @connect      127.0.0.1
 // @connect      localhost
-// @connect      my-domain.com
+// @connect      my-domain.com		// replace with your custom domain if using the "custom" provider
 // @connect      raw.githubusercontent.com
 // @connect      cdn.jsdelivr.net
 // ==/UserScript==
@@ -19,68 +20,106 @@
 	'use strict';
 
 	const CONFIG = {
-		// Root folder inside the repository
-		systemRoot: "Extension",
-		// Workspace directory name containing target modules
+		// Active workspace name used for data scoping
 		workspace: "Base",
-
-		// Host domain used to anchor the virtual dashboard
+		// Host domain used to anchor the virtual workspace
 		dashboardHost: "google.com",
-		// Virtual path for the dashboard (recommended to be a non-existent path on the host)
+		// Virtual route on the host domain
 		dashboardPath: "/omninexus",
-
-		// Active source provider: "github" | "custom" | "local" | "file"
+		// Active provider: "github" | "custom" | "local" | "file"
 		provider: "github",
 
 		sources: {
 			github: {
-				// Public repository details
 				username: "Priboy313",
 				repo: "omniNexus",
 				branch: "main",
 			},
 			custom: {
-				// Self-hosted server endpoint
 				baseUrl: "https://my-domain.com/omninexus"
 			},
 			local: {
-				// Local dev server endpoint
 				baseUrl: "http://127.0.0.1:5500"
 			},
 			file: {
-				// Direct filesystem path without running an HTTP server (requires "Allow access to file URLs")
-				baseUrl: "file:///C:/Users/USER_NAME/Desktop/omniNexus"
+				baseUrl: "file:///C:/omniNexus"
 			}
 		},
 
-		// User access role
 		role: "user",
-		// Cache time-to-live for version checks (in minutes)
 		ttlMinutes: 60,
 	};
 
-	const CACHE_PREFIX = `nexus_${CONFIG.workspace}_`;
-	const ROUTER_CACHE_KEY = CACHE_PREFIX + 'router';
-	const SETTINGS_KEY = CACHE_PREFIX + 'settings';
-	const VERSION_CACHE_KEY = CACHE_PREFIX + 'version';
+	class GMStorageAdapter {
+		constructor(workspace, moduleId) {
+			this.workspace = workspace;
+			this.moduleId = moduleId;
+			this.prefix = `nexus_${workspace}_`;
+		}
 
+		get(key, fallback = null) {
+			const fullKey = key === 'data' ? `${this.prefix}${this.moduleId}` : `${this.prefix}${this.moduleId}_${key}`;
+			return GM_getValue(fullKey, fallback);
+		}
+
+		set(key, value) {
+			const fullKey = key === 'data' ? `${this.prefix}${this.moduleId}` : `${this.prefix}${this.moduleId}_${key}`;
+			GM_setValue(fullKey, value);
+		}
+
+		getGlobal(key, fallback = null) {
+			return GM_getValue(`${this.prefix}${key}`, fallback);
+		}
+
+		setGlobal(key, value) {
+			GM_setValue(`${this.prefix}${key}`, value);
+		}
+
+		exportAll() {
+			const keys = typeof GM_listValues === 'function' ? GM_listValues() : [];
+			const result = {};
+			keys.forEach(k => {
+				if (k.startsWith(this.prefix)) {
+					const cleanKey = k.replace(this.prefix, '');
+					result[cleanKey] = GM_getValue(k);
+				}
+			});
+			return {
+				__meta: {
+					workspace: this.workspace,
+					timestamp: Date.now(),
+					exportedAt: new Date().toISOString()
+				},
+				data: result
+			};
+		}
+
+		importAll(payload) {
+			const data = payload.data || payload;
+			for (const key in data) {
+				if (key.startsWith('__')) continue;
+				GM_setValue(`${this.prefix}${key}`, data[key]);
+			}
+		}
+	}
+
+	const MANIFEST_CACHE_KEY = `nexus_${CONFIG.workspace}_router`;
+	const VERSION_CACHE_KEY = `nexus_${CONFIG.workspace}_version`;
 	const currentUrl = window.location.href;
 
 	function escapeRegex(str) {
 		return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 	}
 
-	let routerCache = GM_getValue(ROUTER_CACHE_KEY, { timestamp: 0, routes: [] });
+	let manifestCache = GM_getValue(MANIFEST_CACHE_KEY, { timestamp: 0, routes: [] });
 
 	let activeRoute = null;
-	for (const route of routerCache.routes) {
+	for (const route of manifestCache.routes) {
 		let pattern = route.pattern;
-
 		if (route.subpath) {
 			const cleanSub = route.subpath.replace(/^\/+|\/+$/g, '');
 			pattern = `${escapeRegex(CONFIG.dashboardHost)}.*${escapeRegex(CONFIG.dashboardPath)}\\/${cleanSub}(\\/)?($|\\?.*)`;
 		}
-
 		if (pattern && new RegExp(pattern, 'i').test(currentUrl)) {
 			activeRoute = route;
 			break;
@@ -106,14 +145,14 @@
 	async function init() {
 		try {
 			const ttlMs = CONFIG.ttlMinutes * 60 * 1000;
-			const cachedVersionData = GM_getValue(VERSION_CACHE_KEY, null);
-			const isExpired = !cachedVersionData || (Date.now() - cachedVersionData.timestamp > ttlMs);
+			const cachedVersion = GM_getValue(VERSION_CACHE_KEY, null);
+			const isExpired = !cachedVersion || (Date.now() - cachedVersion.timestamp > ttlMs);
 
 			const needUpdate = isDashboardHome || isExpired;
 			const currentVersion = await resolveVersion(needUpdate);
 
 			if (needUpdate) {
-				await updateRouter(currentVersion);
+				await updateManifest(currentVersion);
 			}
 
 			if (isDashboardHome) {
@@ -147,7 +186,7 @@
 		}
 
 		const src = CONFIG.sources.github;
-		const versionUrl = `https://raw.githubusercontent.com/${src.username}/${src.repo}/${src.branch}/${CONFIG.systemRoot}/version.json?t=${Date.now()}`;
+		const versionUrl = `https://raw.githubusercontent.com/${src.username}/${src.repo}/${src.branch}/version.json?t=${Date.now()}`;
 
 		try {
 			const res = await request({ method: 'GET', url: versionUrl });
@@ -161,14 +200,14 @@
 
 			return version;
 		} catch (e) {
-			console.warn("[omniNexus] Failed to resolve version from version.json, falling back to cache:", e);
+			console.warn("[omniNexus] Failed to resolve version, falling back to cache:", e);
 			return cached ? cached.version : 'latest';
 		}
 	}
 
 	function getCoreUrl(version) {
 		const src = CONFIG.sources[CONFIG.provider];
-		const path = `${CONFIG.systemRoot}/_core/NexusBehaviour.js`;
+		const path = `Core/NexusBehaviour.js`;
 
 		if (CONFIG.provider === 'github') {
 			return `https://raw.githubusercontent.com/${src.username}/${src.repo}/${src.branch}/${path}?v=${version}`;
@@ -181,7 +220,7 @@
 
 	function getWorkerUrl(workerName, version) {
 		const src = CONFIG.sources[CONFIG.provider];
-		const path = `${CONFIG.systemRoot}/${CONFIG.workspace}/${workerName}`;
+		const path = `Modules/${workerName}`;
 
 		if (CONFIG.provider === 'github') {
 			return `https://raw.githubusercontent.com/${src.username}/${src.repo}/${src.branch}/${path}?v=${version}`;
@@ -192,29 +231,29 @@
 		return `${src.baseUrl}/${path}?t=${Date.now()}`;
 	}
 
-	async function updateRouter(version) {
+	async function updateManifest(version) {
 		try {
-			let routerUrl;
+			let manifestUrl;
 			const src = CONFIG.sources[CONFIG.provider];
-			const path = `${CONFIG.systemRoot}/${CONFIG.workspace}/router.json`;
+			const path = `Modules/manifest.json`;
 
 			if (CONFIG.provider === 'github') {
-				routerUrl = `https://raw.githubusercontent.com/${src.username}/${src.repo}/${src.branch}/${path}?v=${version}`;
+				manifestUrl = `https://raw.githubusercontent.com/${src.username}/${src.repo}/${src.branch}/${path}?v=${version}`;
 			} else if (CONFIG.provider === 'file') {
-				routerUrl = `${src.baseUrl}/${path}`;
+				manifestUrl = `${src.baseUrl}/${path}`;
 			} else {
-				routerUrl = `${src.baseUrl}/${path}?t=${Date.now()}`;
+				manifestUrl = `${src.baseUrl}/${path}?t=${Date.now()}`;
 			}
 
-			const res = await request({ method: 'GET', url: routerUrl });
-			const newRouter = JSON.parse(res.responseText);
+			const res = await request({ method: 'GET', url: manifestUrl });
+			const newManifest = JSON.parse(res.responseText);
 
-			GM_setValue(ROUTER_CACHE_KEY, {
+			GM_setValue(MANIFEST_CACHE_KEY, {
 				timestamp: Date.now(),
-				routes: newRouter.routes || []
+				routes: newManifest.routes || []
 			});
 		} catch (e) {
-			console.error("[omniNexus] Failed to update router.json:", e);
+			console.error("[omniNexus] Failed to update manifest.json:", e);
 		}
 	}
 
@@ -222,9 +261,8 @@
 		const coreUrl = getCoreUrl(version);
 		const workerUrl = getWorkerUrl(workerFileName, version);
 
-		const globalSettings = GM_getValue(SETTINGS_KEY, {});
+		const globalSettings = GM_getValue(`nexus_${CONFIG.workspace}_settings`, {});
 		const moduleSettings = globalSettings[moduleId] || {};
-		const settingsJSON = JSON.stringify(moduleSettings);
 
 		try {
 			const [coreRes, workerRes] = await Promise.all([
@@ -237,13 +275,19 @@
 			const WorkerClass = new Function('NexusBehaviour', workerRes.responseText + '; return typeof ModuleClass !== "undefined" ? ModuleClass : null;')(NexusBehaviour);
 
 			if (WorkerClass) {
+				const storageAdapter = new GMStorageAdapter(CONFIG.workspace, moduleId);
+				
 				new WorkerClass({
-					settingsJSON,
-					role: CONFIG.role,
-					GM_getValue,
-					GM_setValue,
-					GM_listValues,
-					CONFIG
+					storage: storageAdapter,
+					config: moduleSettings,
+					env: {
+						workspace: CONFIG.workspace,
+						role: CONFIG.role,
+						provider: CONFIG.provider,
+						dashboardHost: CONFIG.dashboardHost,
+						dashboardPath: CONFIG.dashboardPath,
+						version: version
+					}
 				});
 			} else {
 				console.error(`[omniNexus] Module "${workerFileName}" did not export ModuleClass`);

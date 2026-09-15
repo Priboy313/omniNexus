@@ -2,10 +2,8 @@ var ModuleClass = (function(NexusBehaviour) {
 
 	return class OmniSheet extends NexusBehaviour.Explorer {
 
-		moduleTitle = '📊 omniSheet Studio';
-		storageKey = 'sheet';
-		fileIcon = '📊';
-		templateIcon = '📑';
+		moduleIcon = '📊';
+		moduleTitle = 'omniSheet Studio';
 		defaultFileName = 'New Sheet';
 		defaultTemplateName = 'New Template';
 		emptyStateIcon = '📊';
@@ -224,7 +222,7 @@ var ModuleClass = (function(NexusBehaviour) {
 							<button class="s-btn" id="btn-del-col">- Col</button>
 						</div>
 						<div class="toolbar-group">
-							<button class="s-btn" id="btn-copy-tsv" title="Copy table to clipboard for Excel">📋 Copy for Excel</button>
+							<button class="s-btn" id="btn-copy-tsv" title="Copy table for Excel">📋 Copy for Excel</button>
 							<button class="s-btn" id="btn-paste-tsv" title="Paste data copied from Excel">📥 Paste from Excel</button>
 							<button class="s-btn" id="btn-export-csv">💾 Download .csv</button>
 						</div>
@@ -266,7 +264,7 @@ var ModuleClass = (function(NexusBehaviour) {
 
 			const thead = document.createElement('thead');
 			const headerRow = document.createElement('tr');
-
+			
 			const cornerTh = document.createElement('th');
 			cornerTh.className = 'corner-header';
 			headerRow.appendChild(cornerTh);

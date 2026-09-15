@@ -1,28 +1,13 @@
 class NexusBehaviour {
     constructor(context) {
         this.id = this.constructor.name;
-        this.role = context.role;
-        this.workspace = context.CONFIG.workspace;
-        this.CONFIG = context.CONFIG;
+        this.storage = context.storage;
+        this.env = context.env || {};
+        this.config = context.config || {};
         this._context = context;
-        
-        this._GM_get = context.GM_getValue;
-        this._GM_set = context.GM_setValue;
-        this._GM_list = context.GM_listValues;
         this._observers = [];
 
         queueMicrotask(() => this._initLifecycle());
-    }
-
-    get config() {
-        if (!this._cachedConfig) {
-            let userSettings = {};
-            try {
-                userSettings = JSON.parse(this._context?.settingsJSON || '{}');
-            } catch (e) {}
-            this._cachedConfig = { ...(this.defaults || {}), ...userSettings };
-        }
-        return this._cachedConfig;
     }
 
     _initLifecycle() {
@@ -40,7 +25,8 @@ class NexusBehaviour {
     updateTitle(customTitle = null) {
         const icon = this.moduleIcon ? `${this.moduleIcon} ` : '';
         const title = customTitle || this.moduleTitle || this.id;
-        document.title = `${icon}${title} // ${this.workspace}`;
+        const ws = this.env.workspace ? ` // ${this.env.workspace}` : '';
+        document.title = `${icon}${title}${ws}`;
     }
 
     injectGlobalScrollbars() {
@@ -62,7 +48,9 @@ class NexusBehaviour {
     start() {}
 
     print(...args) {
-        if (this.role === "dodev") console.log(`==== [${this.id}]`, ...args);
+        if (this.env.role === "dodev") {
+            console.log(`==== [${this.id}]`, ...args);
+        }
     }
 
     addCSS(cssString, subId = null) {
@@ -117,26 +105,17 @@ class NexusBehaviour {
     }
 
     save(key, value) {
-        this._GM_set(`nexus_${this.workspace}_${this.id}_${key}`, value);
+        return this.storage.set(key, value);
     }
 
     load(key, fallback = null) {
-        return this._GM_get(`nexus_${this.workspace}_${this.id}_${key}`, fallback);
-    }
-
-    saveGlobal(key, value) {
-        this._GM_set(`nexus_${this.workspace}_${key}`, value);
-    }
-
-    loadGlobal(key, fallback = null) {
-        return this._GM_get(`nexus_${this.workspace}_${key}`, fallback);
+        return this.storage.get(key, fallback);
     }
 }
 
 NexusBehaviour.Explorer = class NexusExplorerBehaviour extends NexusBehaviour {
 
     moduleTitle = 'omniNexus Explorer';
-    storageKey = 'files';
     fileIcon = '📄';
     templateIcon = '📑';
     defaultFileName = 'New Document';
@@ -146,10 +125,10 @@ NexusBehaviour.Explorer = class NexusExplorerBehaviour extends NexusBehaviour {
     emptyStateDesc = 'Select a document from the explorer on the left or create a new one.';
 
     awake() {
-        const hubUrl = `https://${this.CONFIG.dashboardHost}${this.CONFIG.dashboardPath}`;
+        const hubUrl = `https://${this.env.dashboardHost}${this.env.dashboardPath}`;
 
         document.documentElement.innerHTML = `
-            <head><title>${this.moduleTitle} // ${this.workspace}</title></head>
+            <head><title>${this.moduleTitle} // ${this.env.workspace}</title></head>
             <body>
                 <header>
                     <div class="header-left">
@@ -246,7 +225,7 @@ NexusBehaviour.Explorer = class NexusExplorerBehaviour extends NexusBehaviour {
     }
 
     start() {
-        this.appData = this.loadGlobal(this.storageKey, this.config.defaultData || {});
+        this.appData = this.load('data', this.defaults.defaultData || {});
         if (!this.appData.files) this.appData.files = [];
         if (!this.appData.templates) this.appData.templates = [];
         if (this.appData.isTemplatesOpen === undefined) this.appData.isTemplatesOpen = true;
@@ -325,7 +304,7 @@ NexusBehaviour.Explorer = class NexusExplorerBehaviour extends NexusBehaviour {
                 </div>
                 ${badgeHTML || ''}
                 <div class="file-actions">
-                    ${isTemplate ? `<button class="file-btn make-file" title="Create document from template">⚡</button>` : ''}
+                    ${isTemplate ? `<button class="file-btn make-file" title="Create from template">⚡</button>` : ''}
                     <button class="file-btn edit" title="Rename">✏️</button>
                     <button class="file-btn del" title="Delete">✕</button>
                 </div>
@@ -447,7 +426,7 @@ NexusBehaviour.Explorer = class NexusExplorerBehaviour extends NexusBehaviour {
     }
 
     createNewFile() {
-        const name = prompt('Document Name:', this.defaultFileName);
+        const name = prompt('Name:', this.defaultFileName);
         if (!name || !name.trim()) return;
 
         const newFile = {
@@ -480,7 +459,7 @@ NexusBehaviour.Explorer = class NexusExplorerBehaviour extends NexusBehaviour {
     }
 
     instantiateTemplate(tpl) {
-        const name = prompt('Document Name from Template:', `${tpl.name} (Copy)`);
+        const name = prompt('Name from template:', `${tpl.name} (Copy)`);
         if (!name || !name.trim()) return;
 
         const newFile = {
@@ -510,7 +489,7 @@ NexusBehaviour.Explorer = class NexusExplorerBehaviour extends NexusBehaviour {
         const item = list.find(x => x.id === id);
         if (!item) return;
 
-        const label = isTemplate ? 'template' : 'document';
+        const label = isTemplate ? 'template' : 'file';
         if (!confirm(`Delete ${label} "${item.name}"?`)) return;
 
         if (isTemplate) {
@@ -534,6 +513,6 @@ NexusBehaviour.Explorer = class NexusExplorerBehaviour extends NexusBehaviour {
     }
 
     persist() {
-        this.saveGlobal(this.storageKey, this.appData);
+        this.save('data', this.appData);
     }
 };

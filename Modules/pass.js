@@ -2,6 +2,9 @@ var ModuleClass = (function(NexusBehaviour) {
 
 	return class OmniPass extends NexusBehaviour {
 
+		moduleIcon = '🔐';
+		moduleTitle = 'omniPass';
+
 		defaults = {
 			defaultData: {
 				categories: ['All', 'Streaming', 'Ecosystems', 'TV & Satellite'],
@@ -10,10 +13,10 @@ var ModuleClass = (function(NexusBehaviour) {
 		};
 
 		awake() {
-			const hubUrl = `https://${this.CONFIG.dashboardHost}${this.CONFIG.dashboardPath}`;
+			const hubUrl = `https://${this.env.dashboardHost}${this.env.dashboardPath}`;
 
 			document.documentElement.innerHTML = `
-				<head><title>omniPass // ${this.workspace}</title></head>
+				<head><title>omniPass // ${this.env.workspace}</title></head>
 				<body>
 					<header>
 						<div class="header-left">
@@ -106,7 +109,8 @@ var ModuleClass = (function(NexusBehaviour) {
 		}
 
 		start() {
-			this.appData = this.loadGlobal('pass', this.config.defaultData);
+			const raw = this.load('data') || (this.storage.getGlobal ? this.storage.getGlobal('pass') : null) || this.defaults.defaultData;
+			this.appData = raw;
 			if (!this.appData.accounts) this.appData.accounts = [];
 			if (!this.appData.categories) this.appData.categories = ['All'];
 
@@ -371,7 +375,7 @@ var ModuleClass = (function(NexusBehaviour) {
 		}
 
 		persist() {
-			this.saveGlobal('pass', this.appData);
+			this.save('data', this.appData);
 		}
 	};
 

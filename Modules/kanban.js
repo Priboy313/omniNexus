@@ -1,6 +1,9 @@
 var ModuleClass = (function(NexusBehaviour) {
 
-	return class NexusTrello extends NexusBehaviour {
+	return class NexusKanban extends NexusBehaviour {
+
+		moduleIcon = '📋';
+		moduleTitle = 'omniKanban';
 
 		defaults = {
 			defaultData: {
@@ -8,7 +11,7 @@ var ModuleClass = (function(NexusBehaviour) {
 				boards: [
 					{
 						id: 'b_1',
-						title: 'Главная доска',
+						title: 'Main Board',
 						columns: [
 							{ id: 'col_1', title: 'To Do', cards: [] },
 							{ id: 'col_2', title: 'In Progress', cards: [] },
@@ -20,22 +23,20 @@ var ModuleClass = (function(NexusBehaviour) {
 		};
 
 		awake() {
-			const hubUrl = `https://${this.CONFIG.dashboardHost}${this.CONFIG.dashboardPath}`;
+			const hubUrl = `https://${this.env.dashboardHost}${this.env.dashboardPath}`;
 
 			document.documentElement.innerHTML = `
-				<head><title>omniKanban // ${this.workspace}</title></head>
+				<head><title>omniKanban // ${this.env.workspace}</title></head>
 				<body>
 					<header id="trello-header">
 						<div class="header-left">
-							<a href="${hubUrl}" class="back-link">← В Хаб</a>
+							<a href="${hubUrl}" class="back-link">← Hub</a>
 							<span class="header-title">⚡ omniKanban</span>
-							
-							<!-- Вкладки досок -->
 							<div class="board-tabs-bar" id="board-tabs"></div>
 						</div>
 						<div class="header-right">
-							<input type="text" id="board-search" placeholder="Поиск карточек и тегов..." />
-							<button class="hdr-btn" id="btn-add-col">+ Колонка</button>
+							<input type="text" id="board-search" placeholder="Search cards or tags..." />
+							<button class="hdr-btn" id="btn-add-col">+ Column</button>
 						</div>
 					</header>
 					<main id="board-canvas"></main>
@@ -46,7 +47,6 @@ var ModuleClass = (function(NexusBehaviour) {
 				* { box-sizing: border-box; }
 				body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background: #0f172a; color: #f8fafc; height: 100vh; display: flex; flex-direction: column; overflow: hidden; user-select: none; }
 				
-				/* Шапка */
 				header { height: 56px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; flex-shrink: 0; gap: 16px; }
 				.header-left, .header-right { display: flex; align-items: center; gap: 12px; }
 				.header-left { flex-grow: 1; overflow: hidden; }
@@ -54,7 +54,6 @@ var ModuleClass = (function(NexusBehaviour) {
 				.back-link:hover { color: #f8fafc; background: #475569; }
 				.header-title { font-weight: 700; font-size: 16px; color: #38bdf8; white-space: nowrap; flex-shrink: 0; }
 				
-				/* Вкладки нескольких досок */
 				.board-tabs-bar { display: flex; gap: 4px; align-items: center; overflow-x: auto; padding: 2px 6px; scrollbar-width: none; }
 				.board-tabs-bar::-webkit-scrollbar { display: none; }
 				.board-tab { background: #0f172a; border: 1px solid #334155; color: #94a3b8; padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; transition: all 0.15s; }
@@ -70,10 +69,8 @@ var ModuleClass = (function(NexusBehaviour) {
 				.hdr-btn { background: #0284c7; border: none; color: white; padding: 7px 14px; border-radius: 4px; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; }
 				.hdr-btn:hover { background: #0369a1; }
 
-				/* Холст доски */
 				#board-canvas { flex-grow: 1; overflow-x: auto; padding: 20px; display: flex; gap: 16px; align-items: flex-start; }
 				
-				/* Столбцы (с поддержкой перетаскивания) */
 				.col { background: #1e293b; border: 1px solid #334155; width: 300px; min-width: 300px; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; max-height: calc(100vh - 96px); flex-shrink: 0; transition: border-color 0.15s, opacity 0.15s; }
 				.col.col-dragging { opacity: 0.3; }
 				.col.col-drop-target { border-left: 3px solid #38bdf8 !important; }
@@ -86,10 +83,8 @@ var ModuleClass = (function(NexusBehaviour) {
 				.icon-btn { background: transparent; border: none; color: #64748b; cursor: pointer; padding: 4px; border-radius: 4px; font-size: 12px; }
 				.icon-btn:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
 				
-				/* Список карточек */
 				.card-list { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 40px; padding: 2px; }
 				
-				/* Карточка */
 				.card { background: #334155; border: 1px solid #475569; padding: 10px 12px; border-radius: 6px; cursor: pointer; transition: transform 0.1s, border-color 0.15s; display: flex; flex-direction: column; gap: 6px; position: relative; }
 				.card:hover { border-color: #38bdf8; transform: translateY(-1px); }
 				.card.card-dragging { opacity: 0.2; }
@@ -115,7 +110,6 @@ var ModuleClass = (function(NexusBehaviour) {
 				.btn-save { background: #0284c7; color: white; }
 				.btn-cancel { background: transparent; color: #94a3b8; }
 
-				/* Модальное окно */
 				#modal-container { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); z-index: 9999; justify-content: center; align-items: center; padding: 20px; }
 				.modal-box { background: #1e293b; border: 1px solid #475569; border-radius: 8px; width: 100%; max-width: 680px; max-height: 90vh; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); user-select: text; }
 				.modal-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
@@ -132,7 +126,6 @@ var ModuleClass = (function(NexusBehaviour) {
 				.modal-desc-area { width: 100%; min-height: 90px; background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 10px; border-radius: 4px; font-family: inherit; font-size: 13px; resize: vertical; outline: none; }
 				.modal-desc-area:focus { border-color: #38bdf8; }
 
-				/* Вложенный чеклист в модалке */
 				.progress-bar-bg { background: #0f172a; height: 6px; border-radius: 3px; overflow: hidden; margin: 4px 0 8px 0; }
 				.progress-bar-fill { background: #10b981; height: 100%; width: 0%; transition: width 0.2s ease; }
 				.modal-chk-list { display: flex; flex-direction: column; gap: 6px; }
@@ -165,8 +158,8 @@ var ModuleClass = (function(NexusBehaviour) {
 		}
 
 		start() {
-			const rawData = this.loadGlobal('trello', this.config.defaultData);
-			this.appData = this.migrate(rawData);
+			const raw = this.load('data') || (this.storage.getGlobal ? this.storage.getGlobal('trello') : null) || this.defaults.defaultData;
+			this.appData = this.migrate(raw);
 
 			this.filterText = '';
 			this.draggedCardId = null;
@@ -178,31 +171,28 @@ var ModuleClass = (function(NexusBehaviour) {
 			this.render();
 		}
 
-		// Бесшовная миграция любых старых форматов данных
 		migrate(raw) {
 			if (!raw) return this.defaults.defaultData;
 
-			// Если в памяти лежал массив колонок старого Трелло — упаковываем в доску "Главная"
 			if (Array.isArray(raw)) {
 				return {
 					activeBoardId: 'b_main',
 					boards: [
 						{
 							id: 'b_main',
-							title: 'Главная',
+							title: 'Main Board',
 							columns: this.migrateColumns(raw)
 						}
 					]
 				};
 			}
 
-			// Если уже формат с несколькими досками
 			if (raw.boards && Array.isArray(raw.boards)) {
 				return {
 					activeBoardId: raw.activeBoardId || raw.boards[0]?.id || 'b_main',
 					boards: raw.boards.map(b => ({
 						id: b.id || 'b_' + Date.now(),
-						title: b.title || 'Доска',
+						title: b.title || 'Board',
 						columns: this.migrateColumns(b.columns || [])
 					}))
 				};
@@ -214,14 +204,14 @@ var ModuleClass = (function(NexusBehaviour) {
 		migrateColumns(cols) {
 			return (cols || []).map(col => ({
 				id: col.id || 'col_' + Date.now(),
-				title: col.title || 'Колонка',
+				title: col.title || 'Column',
 				cards: (col.cards || []).map(c => {
 					if (typeof c === 'string') {
 						return { id: 'c_' + Date.now() + Math.random(), title: c, description: '', tags: [], checklist: [], dueDate: '' };
 					}
 					return {
 						id: c.id || ('c_' + Date.now() + Math.random()),
-						title: c.title || c.text || 'Без названия',
+						title: c.title || c.text || 'Untitled',
 						description: c.description || '',
 						tags: c.tags || [],
 						checklist: (c.checklist || []).map(chk => ({
@@ -268,7 +258,6 @@ var ModuleClass = (function(NexusBehaviour) {
 			this.renderBoard();
 		}
 
-		// Рендер вкладок досок в шапке
 		renderTabs() {
 			const tabsContainer = document.getElementById('board-tabs');
 			tabsContainer.innerHTML = '';
@@ -279,7 +268,7 @@ var ModuleClass = (function(NexusBehaviour) {
 				
 				tab.innerHTML = `
 					<span>${b.title}</span>
-					${this.appData.boards.length > 1 ? `<span class="tab-del-btn" title="Удалить доску">✕</span>` : ''}
+					${this.appData.boards.length > 1 ? `<span class="tab-del-btn" title="Delete board">✕</span>` : ''}
 				`;
 
 				tab.onclick = (e) => {
@@ -303,8 +292,8 @@ var ModuleClass = (function(NexusBehaviour) {
 
 			const addBoardBtn = document.createElement('button');
 			addBoardBtn.className = 'new-board-btn';
-			addBoardBtn.textContent = '+ Доска';
-			addBoardBtn.title = 'Создать новую доску';
+			addBoardBtn.textContent = '+ Board';
+			addBoardBtn.title = 'Create new board';
 			addBoardBtn.onclick = () => this.addBoard();
 			tabsContainer.appendChild(addBoardBtn);
 		}
@@ -316,7 +305,7 @@ var ModuleClass = (function(NexusBehaviour) {
 			const currentBoard = this.getActiveBoard();
 			if (!currentBoard) return;
 
-			currentBoard.columns.forEach((col, colIdx) => {
+			currentBoard.columns.forEach((col) => {
 				const colEl = document.createElement('div');
 				colEl.className = 'col';
 				colEl.dataset.colId = col.id;
@@ -330,36 +319,34 @@ var ModuleClass = (function(NexusBehaviour) {
 				});
 
 				colEl.innerHTML = `
-					<div class="col-header" draggable="true" title="Зажмите для перетаскивания колонки. Двойной клик — переименовать">
+					<div class="col-header" draggable="true" title="Drag to reorder column. Double click to rename">
 						<div class="col-title">
 							<span>${col.title}</span>
 							<span class="col-badge">${visibleCards.length}</span>
 						</div>
 						<div class="col-actions">
-							<button class="icon-btn del-col-btn" title="Удалить колонку">✕</button>
+							<button class="icon-btn del-col-btn" title="Delete column">✕</button>
 						</div>
 					</div>
 					<div class="card-list" data-col="${col.id}"></div>
 					<div class="add-card-container">
-						<button class="quick-add-btn">+ Добавить карточку</button>
+						<button class="quick-add-btn">+ Add card</button>
 						<div class="quick-add-form">
-							<input type="text" class="quick-add-input" placeholder="Заголовок карточки..." />
+							<input type="text" class="quick-add-input" placeholder="Card title..." />
 							<div class="quick-actions">
-								<button class="btn-sub btn-save">Добавить</button>
-								<button class="btn-sub btn-cancel">Отмена</button>
+								<button class="btn-sub btn-save">Add</button>
+								<button class="btn-sub btn-cancel">Cancel</button>
 							</div>
 						</div>
 					</div>
 				`;
 
-				// Двойной клик на название колонки
 				colEl.querySelector('.col-title').ondblclick = (e) => {
 					e.stopPropagation();
 					this.renameColumn(col.id);
 				};
 				colEl.querySelector('.del-col-btn').onclick = () => this.deleteColumn(col.id);
 
-				// 1. Drag & Drop перетаскивания колонок
 				const colHeader = colEl.querySelector('.col-header');
 				colHeader.addEventListener('dragstart', (e) => {
 					this.draggedColId = col.id;
@@ -391,7 +378,6 @@ var ModuleClass = (function(NexusBehaviour) {
 					}
 				});
 
-				// Добавление карточки
 				const addBtn = colEl.querySelector('.quick-add-btn');
 				const addForm = colEl.querySelector('.quick-add-form');
 				const input = colEl.querySelector('.quick-add-input');
@@ -432,7 +418,6 @@ var ModuleClass = (function(NexusBehaviour) {
 					if (e.key === 'Escape') cancelBtn.click();
 				};
 
-				// Drag & Drop карточек в пустую зону колонки
 				const listEl = colEl.querySelector('.card-list');
 				listEl.addEventListener('dragover', (e) => {
 					if (this.draggedCardId) e.preventDefault();
@@ -445,7 +430,6 @@ var ModuleClass = (function(NexusBehaviour) {
 					}
 				});
 
-				// Рендер карточек
 				visibleCards.forEach(card => {
 					const cardEl = this.createCardElement(currentBoard, card, col.id);
 					listEl.appendChild(cardEl);
@@ -488,7 +472,6 @@ var ModuleClass = (function(NexusBehaviour) {
 				${badgesHTML ? `<div class="card-badges">${badgesHTML}</div>` : ''}
 			`;
 
-			// Drag & Drop карточек между позициями
 			el.addEventListener('dragstart', (e) => {
 				this.draggedCardId = card.id;
 				this.sourceColId = colId;
@@ -542,7 +525,6 @@ var ModuleClass = (function(NexusBehaviour) {
 			return el;
 		}
 
-		// Модалка просмотра и редактирования задачи
 		openCardModal(board, card, colId, autoFocusChk = false) {
 			const container = document.getElementById('modal-container');
 			container.style.display = 'flex';
@@ -560,31 +542,30 @@ var ModuleClass = (function(NexusBehaviour) {
 
 					<div class="modal-row">
 						<div class="modal-field">
-							<span class="modal-label">Дедлайн</span>
+							<span class="modal-label">Due Date</span>
 							<input type="date" class="modal-date-input" id="m-due" value="${card.dueDate || ''}" />
 						</div>
 						<div class="modal-field">
-							<span class="modal-label">Теги</span>
+							<span class="modal-label">Tags</span>
 							<div class="tags-container" id="m-tags">
 								${card.tags.map((t, idx) => `
 									<span class="tag-pill" style="background:${t.color}">
 										${t.name} <span class="tag-del-btn" data-tag="${idx}">✕</span>
 									</span>
 								`).join('')}
-								<button class="new-tag-btn" id="m-add-tag">+ Добавить тег</button>
+								<button class="new-tag-btn" id="m-add-tag">+ Add tag</button>
 							</div>
 						</div>
 					</div>
 
 					<div class="modal-field">
-						<span class="modal-label">Описание</span>
-						<textarea class="modal-desc-area" id="m-desc" placeholder="Подробное описание задачи...">${card.description || ''}</textarea>
+						<span class="modal-label">Description</span>
+						<textarea class="modal-desc-area" id="m-desc" placeholder="Card description...">${card.description || ''}</textarea>
 					</div>
 
-					<!-- Чеклист с поддержкой Drag-and-Drop и редактирования -->
 					<div class="modal-field">
 						<div style="display:flex;justify-content:space-between;align-items:center;">
-							<span class="modal-label">Чек-лист</span>
+							<span class="modal-label">Checklist</span>
 							<span style="font-size:12px;color:#10b981;font-weight:bold;">${progressPercent}%</span>
 						</div>
 						<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${progressPercent}%;"></div></div>
@@ -593,43 +574,40 @@ var ModuleClass = (function(NexusBehaviour) {
 							${card.checklist.map(item => `
 								<div class="chk-item ${item.done ? 'done' : ''}" data-chkid="${item.id}" draggable="true">
 									<div class="chk-left">
-										<span class="chk-drag-handle" title="Зажмите для изменения порядка">⠿</span>
+										<span class="chk-drag-handle" title="Drag to reorder">⠿</span>
 										<input type="checkbox" data-chk="${item.id}" ${item.done ? 'checked' : ''} />
-										<span class="chk-text" data-edit-chk="${item.id}" title="Двойной клик для редактирования">${item.text}</span>
+										<span class="chk-text" data-edit-chk="${item.id}" title="Double click to edit">${item.text}</span>
 									</div>
 									<div class="chk-actions">
-										<button class="chk-btn edit-chk" data-edit-chk="${item.id}" title="Редактировать">✏️</button>
-										<button class="chk-btn del" data-del-chk="${item.id}" title="Удалить">✕</button>
+										<button class="chk-btn edit-chk" data-edit-chk="${item.id}" title="Edit">✏️</button>
+										<button class="chk-btn del" data-del-chk="${item.id}" title="Delete">✕</button>
 									</div>
 								</div>
 							`).join('')}
 						</div>
 
 						<div class="add-chk-row">
-							<input type="text" class="add-chk-input" id="m-new-chk" placeholder="Добавить пункт чек-листа (Enter)..." />
-							<button class="btn-sub btn-save" id="m-add-chk-btn">+ Добавить</button>
+							<input type="text" class="add-chk-input" id="m-new-chk" placeholder="Add checklist item (Enter)..." />
+							<button class="btn-sub btn-save" id="m-add-chk-btn">+ Add</button>
 						</div>
 					</div>
 
 					<div class="modal-footer">
-						<button class="danger-btn" id="m-delete-card">Удалить карточку</button>
-						<button class="primary-btn" id="m-save">Готово</button>
+						<button class="danger-btn" id="m-delete-card">Delete Card</button>
+						<button class="primary-btn" id="m-save">Done</button>
 					</div>
 				</div>
 			`;
 
-			// Слушатели закрытия
 			document.getElementById('m-close').onclick = () => this.closeModal();
 			document.getElementById('m-save').onclick = () => this.closeModal();
 
-			// Редактирование текста и даты на лету
-			document.getElementById('m-title').oninput = (e) => { card.title = e.target.value.trim() || 'Без названия'; this.persist(); };
+			document.getElementById('m-title').oninput = (e) => { card.title = e.target.value.trim() || 'Untitled'; this.persist(); };
 			document.getElementById('m-desc').oninput = (e) => { card.description = e.target.value; this.persist(); };
 			document.getElementById('m-due').onchange = (e) => { card.dueDate = e.target.value; this.persist(); };
 
-			// Удаление карточки
 			document.getElementById('m-delete-card').onclick = () => {
-				if (confirm('Удалить эту карточку навсегда?')) {
+				if (confirm('Delete this card permanently?')) {
 					const col = board.columns.find(c => c.id === colId);
 					col.cards = col.cards.filter(c => c.id !== card.id);
 					this.persist();
@@ -638,7 +616,6 @@ var ModuleClass = (function(NexusBehaviour) {
 				}
 			};
 
-			// Переключение чекбоксов
 			const chkListEl = document.getElementById('m-chk-list');
 			chkListEl.onchange = (e) => {
 				if (e.target.dataset.chk) {
@@ -651,7 +628,6 @@ var ModuleClass = (function(NexusBehaviour) {
 				}
 			};
 
-			// Удаление пункта чеклиста
 			chkListEl.onclick = (e) => {
 				const delBtn = e.target.closest('[data-del-chk]');
 				if (delBtn) {
@@ -661,12 +637,11 @@ var ModuleClass = (function(NexusBehaviour) {
 					return;
 				}
 
-				// Редактирование пункта чеклиста
 				const editTarget = e.target.closest('[data-edit-chk]');
 				if (editTarget) {
 					const chkItem = card.checklist.find(i => i.id === editTarget.dataset.editChk);
 					if (chkItem) {
-						const newText = prompt('Редактировать пункт:', chkItem.text);
+						const newText = prompt('Edit item:', chkItem.text);
 						if (newText && newText.trim()) {
 							chkItem.text = newText.trim();
 							this.persist();
@@ -676,13 +651,12 @@ var ModuleClass = (function(NexusBehaviour) {
 				}
 			};
 
-			// Двойной клик по тексту пункта
 			chkListEl.ondblclick = (e) => {
 				const textEl = e.target.closest('.chk-text');
 				if (textEl && textEl.dataset.editChk) {
 					const chkItem = card.checklist.find(i => i.id === textEl.dataset.editChk);
 					if (chkItem) {
-						const newText = prompt('Редактировать пункт:', chkItem.text);
+						const newText = prompt('Edit item:', chkItem.text);
 						if (newText && newText.trim()) {
 							chkItem.text = newText.trim();
 							this.persist();
@@ -692,7 +666,6 @@ var ModuleClass = (function(NexusBehaviour) {
 				}
 			};
 
-			// Drag & Drop сортировка пунктов чеклиста
 			chkListEl.querySelectorAll('.chk-item').forEach(chkEl => {
 				chkEl.addEventListener('dragstart', (e) => {
 					this.draggedChkId = chkEl.dataset.chkid;
@@ -721,14 +694,13 @@ var ModuleClass = (function(NexusBehaviour) {
 				});
 			});
 
-			// Добавление нового пункта чеклиста с АВТОФОКУСОМ
 			const addChk = () => {
 				const inp = document.getElementById('m-new-chk');
 				const val = inp.value.trim();
 				if (val) {
 					card.checklist.push({ id: 'chk_' + Date.now(), text: val, done: false });
 					this.persist();
-					this.openCardModal(board, card, colId, true); // флаг авто-фокуса
+					this.openCardModal(board, card, colId, true);
 				}
 			};
 
@@ -737,7 +709,6 @@ var ModuleClass = (function(NexusBehaviour) {
 				if (e.key === 'Enter') addChk();
 			};
 
-			// Теги
 			document.getElementById('m-tags').onclick = (e) => {
 				if (e.target.dataset.tag) {
 					card.tags.splice(parseInt(e.target.dataset.tag), 1);
@@ -747,7 +718,7 @@ var ModuleClass = (function(NexusBehaviour) {
 			};
 
 			document.getElementById('m-add-tag').onclick = () => {
-				const name = prompt('Название тега:');
+				const name = prompt('Tag name:');
 				if (name && name.trim()) {
 					const colors = ['#0284c7', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 					const randomColor = colors[Math.floor(Math.random() * colors.length)];
@@ -757,7 +728,6 @@ var ModuleClass = (function(NexusBehaviour) {
 				}
 			};
 
-			// Сохраняем фокус в поле ввода, если мы добавляли пункт
 			if (autoFocusChk) {
 				const newInp = document.getElementById('m-new-chk');
 				if (newInp) newInp.focus();
@@ -769,9 +739,8 @@ var ModuleClass = (function(NexusBehaviour) {
 			this.renderBoard();
 		}
 
-		// Управление несколькими досками
 		addBoard() {
-			const name = prompt('Название новой доски:', 'Новая доска');
+			const name = prompt('New Board Name:', 'New Board');
 			if (name && name.trim()) {
 				const newBoard = {
 					id: 'b_' + Date.now(),
@@ -792,7 +761,7 @@ var ModuleClass = (function(NexusBehaviour) {
 		renameBoard(boardId) {
 			const board = this.appData.boards.find(b => b.id === boardId);
 			if (!board) return;
-			const newName = prompt('Новое название доски:', board.title);
+			const newName = prompt('Rename Board:', board.title);
 			if (newName && newName.trim()) {
 				board.title = newName.trim();
 				this.persist();
@@ -801,9 +770,9 @@ var ModuleClass = (function(NexusBehaviour) {
 		}
 
 		deleteBoard(boardId) {
-			if (this.appData.boards.length <= 1) return alert('Нельзя удалить единственную доску.');
+			if (this.appData.boards.length <= 1) return alert('Cannot delete the only board.');
 			const board = this.appData.boards.find(b => b.id === boardId);
-			if (!confirm(`Удалить доску "${board.title}" со всеми колонками и задачами?`)) return;
+			if (!confirm(`Delete board "${board.title}" and all its tasks?`)) return;
 
 			this.appData.boards = this.appData.boards.filter(b => b.id !== boardId);
 			if (this.appData.activeBoardId === boardId) {
@@ -813,12 +782,11 @@ var ModuleClass = (function(NexusBehaviour) {
 			this.render();
 		}
 
-		// Управление колонками
 		addColumn() {
 			const board = this.getActiveBoard();
 			if (!board) return;
 
-			const name = prompt('Название новой колонки:', 'Новая колонка');
+			const name = prompt('Column Name:', 'New Column');
 			if (name && name.trim()) {
 				board.columns.push({
 					id: 'col_' + Date.now(),
@@ -836,7 +804,7 @@ var ModuleClass = (function(NexusBehaviour) {
 			const col = board.columns.find(c => c.id === colId);
 			if (!col) return;
 
-			const newName = prompt('Новое название колонки:', col.title);
+			const newName = prompt('Rename Column:', col.title);
 			if (newName && newName.trim()) {
 				col.title = newName.trim();
 				this.persist();
@@ -851,9 +819,9 @@ var ModuleClass = (function(NexusBehaviour) {
 			if (!col) return;
 
 			if (col.cards.length > 0) {
-				if (!confirm(`В колонке "${col.title}" есть ${col.cards.length} карточек. Удалить со всеми задачами?`)) return;
+				if (!confirm(`Column "${col.title}" contains ${col.cards.length} cards. Delete permanently?`)) return;
 			} else {
-				if (!confirm(`Удалить колонку "${col.title}"?`)) return;
+				if (!confirm(`Delete column "${col.title}"?`)) return;
 			}
 
 			board.columns = board.columns.filter(c => c.id !== colId);
@@ -861,7 +829,6 @@ var ModuleClass = (function(NexusBehaviour) {
 			this.renderBoard();
 		}
 
-		// Перемещение самих колонок
 		reorderColumns(board, fromColId, toColId) {
 			const fromIdx = board.columns.findIndex(c => c.id === fromColId);
 			const toIdx = board.columns.findIndex(c => c.id === toColId);
@@ -874,7 +841,6 @@ var ModuleClass = (function(NexusBehaviour) {
 			this.renderBoard();
 		}
 
-		// Точное перемещение карточки на позицию внутри или между колонками
 		reorderCardPosition(board, fromColId, toColId, cardId, targetCardId, insertBefore) {
 			const fromCol = board.columns.find(c => c.id === fromColId);
 			const toCol = board.columns.find(c => c.id === toColId);
@@ -911,7 +877,6 @@ var ModuleClass = (function(NexusBehaviour) {
 			this.renderBoard();
 		}
 
-		// Сортировка чекбоксов в модалке
 		reorderChecklist(card, fromChkId, toChkId) {
 			const fromIdx = card.checklist.findIndex(i => i.id === fromChkId);
 			const toIdx = card.checklist.findIndex(i => i.id === toChkId);
@@ -923,7 +888,7 @@ var ModuleClass = (function(NexusBehaviour) {
 		}
 
 		persist() {
-			this.saveGlobal('trello', this.appData);
+			this.save('data', this.appData);
 		}
 	};
 
