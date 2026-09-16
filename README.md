@@ -29,7 +29,7 @@ Modules are automatically fetched and version-controlled via GitHub Raw without 
 1. Ensure Tampermonkey is installed and active in your browser.
 2. Click the badge below to trigger the 1-click Tampermonkey installation dialog:
 
-[![Install in Tampermonkey](https://img.shields.io/badge/Tampermonkey-Install%20Script-007acc?style=for-the-badge&logo=tampermonkey)](https://raw.githubusercontent.com/Priboy313/omniNexus/main/Extension/omniNexus.user.js)
+[![Install in Tampermonkey](https://img.shields.io/badge/Tampermonkey-Install%20Script-007acc?style=for-the-badge&logo=tampermonkey)](https://raw.githubusercontent.com/Priboy313/omniNexus/main/omniNexus.user.js)
 
 3. Click **Install**.
 4. Navigate to:
